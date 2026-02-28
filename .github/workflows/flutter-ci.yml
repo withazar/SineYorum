@@ -1,0 +1,224 @@
+name: Flutter CI/CD
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch: # Manual trigger
+
+env:
+  FLUTTER_VERSION: '3.19.0'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+    
+    - name: Install dependencies
+      run: flutter pub get
+    
+    - name: Analyze code
+      run: flutter analyze
+    
+    - name: Run tests
+      run: flutter test
+    
+    - name: Format code
+      run: flutter format --set-exit-if-changed .
+    
+    - name: Check dependencies
+      run: flutter pub outdated
+
+  build-android:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+    
+    - name: Install dependencies
+      run: flutter pub get
+    
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+    
+    - name: Create keystore properties
+      run: |
+        echo "${{ secrets.KEYSTORE }}" > keystore.jks
+        cat << EOF > key.properties
+        storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+        keyPassword=${{ secrets.KEY_PASSWORD }}
+        keyAlias=${{ secrets.KEY_ALIAS }}
+        storeFile=keystore.jks
+        EOF
+    
+    - name: Build APK
+      run: |
+        flutter build apk --release \
+          --split-per-abi \
+          --target-platform android-arm,android-arm64
+      
+    - name: Build App Bundle
+      run: flutter build appbundle --release
+    
+    - name: Upload APK artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: apk-artifacts
+        path: |
+          build/app/outputs/flutter-apk/*.apk
+          build/app/outputs/bundle/release/*.aab
+        retention-days: 7
+    
+    - name: Create Release
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          build/app/outputs/flutter-apk/*.apk
+          build/app/outputs/bundle/release/*.aab
+        tag_name: v${{ github.run_number }}
+        name: Release v${{ github.run_number }}
+        body: |
+          ## SineYorum v${{ github.run_number }}
+          
+          ### Changes
+          - Automated build from CI/CD
+          - Flutter ${{ env.FLUTTER_VERSION }}
+          - Built on: ${{ github.event.head_commit.timestamp }}
+          
+          ### Download
+          - **APK**: `app-release.apk` (split by ABI)
+          - **App Bundle**: `app-release.aab` (Google Play)
+          
+          ### SHA256 Checksums
+          ```
+          ${{ steps.checksums.outputs.sha256 }}
+          ```
+        draft: false
+        prerelease: false
+
+  build-web:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+    
+    - name: Install dependencies
+      run: flutter pub get
+    
+    - name: Build Web
+      run: flutter build web --release
+    
+    - name: Upload Web artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: web-artifacts
+        path: build/web
+        retention-days: 7
+
+  deploy-firebase:
+    needs: [build-android, build-web]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+    
+    - name: Install dependencies
+      run: flutter pub get
+    
+    - name: Build Web
+      run: flutter build web --release
+    
+    - name: Deploy to Firebase Hosting
+      uses: FirebaseExtended/action-hosting-deploy@v0
+      with:
+        repoToken: '${{ secrets.GITHUB_TOKEN }}'
+        firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+        channelId: live
+        projectId: sineyorum
+
+  quality-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: 'stable'
+    
+    - name: Code Metrics
+      run: |
+        # Lines of code
+        find lib -name "*.dart" -exec wc -l {} + | tail -1
+        
+        # Complexity check
+        flutter pub global activate dart_code_metrics
+        flutter pub global run dart_code_metrics:metrics analyze lib --reporter=github
+        
+        # Dependency check
+        flutter pub deps
+        
+    - name: Security Scan
+      run: |
+        # Check for sensitive data
+        grep -r "api_key\|secret\|password\|token" . --include="*.dart" --include="*.yaml" --include="*.gradle" || true
+        
+        # Check dependencies for vulnerabilities
+        flutter pub outdated --mode=null-safety
+
+  notify:
+    needs: [test, build-android, build-web, quality-check]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Send Discord Notification
+      uses: sarisia/actions-status-discord@v1
+      if: always()
+      with:
+        webhook: ${{ secrets.DISCORD_WEBHOOK }}
+        title: "SineYorum CI/CD"
+        description: |
+          **Build #${{ github.run_number }}** - ${{ job.status }}
+          Branch: ${{ github.ref }}
+          Commit: ${{ github.sha }}
+          [View Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+        color: ${{ job.status == 'success' && '00ff00' || 'ff0000' }}
+        username: GitHub Actions
+        avatar_url: https://github.com/withazar.png
