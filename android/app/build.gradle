@@ -1,0 +1,141 @@
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterRoot = localProperties.getProperty('flutter.sdk')
+if (flutterRoot == null) {
+    throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (flutterVersionCode == null) {
+    flutterVersionCode = '1'
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (flutterVersionName == null) {
+    flutterVersionName = '1.0'
+}
+
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'com.google.gms.google-services'
+apply plugin: 'com.google.firebase.crashlytics'
+apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+
+android {
+    namespace "com.withazar.sineyorum"
+    compileSdkVersion flutter.compileSdkVersion
+    ndkVersion flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    defaultConfig {
+        applicationId "com.withazar.sineyorum"
+        minSdkVersion 21
+        targetSdkVersion flutter.targetSdkVersion
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+        
+        // MultiDex for Firebase
+        multiDexEnabled true
+    }
+
+    signingConfigs {
+        release {
+            if (System.getenv()["ANDROID_KEYSTORE_PATH"]) {
+                storeFile file(System.getenv()["ANDROID_KEYSTORE_PATH"])
+                storePassword System.getenv()["ANDROID_KEYSTORE_PASSWORD"]
+                keyAlias System.getenv()["ANDROID_KEY_ALIAS"]
+                keyPassword System.getenv()["ANDROID_KEY_PASSWORD"]
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+            // Enable test ads for debug builds
+            resValue "string", "app_name", "SineYorum Debug"
+            buildConfigField "boolean", "ENABLE_ADS", "true"
+            buildConfigField "String", "ADMOB_APP_ID", "\"ca-app-pub-3940256099942544~3347511713\""
+        }
+        
+        release {
+            signingConfig signingConfigs.release
+            // Enable ads for release builds
+            resValue "string", "app_name", "SineYorum"
+            buildConfigField "boolean", "ENABLE_ADS", "true"
+            buildConfigField "String", "ADMOB_APP_ID", "\"ca-app-pub-3940256099942544~3347511713\""
+            
+            // Enable code shrinking and optimization
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            
+            // Enable Crashlytics for release builds
+            firebaseCrashlytics {
+                nativeSymbolUploadEnabled true
+                unstrippedNativeLibsDir 'build/intermediates/merged_native_libs/release/out/lib'
+            }
+        }
+    }
+
+    // Enable view binding
+    buildFeatures {
+        viewBinding true
+    }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    
+    // MultiDex for Firebase
+    implementation 'androidx.multidex:multidex:2.0.1'
+    
+    // Firebase BoM
+    implementation platform('com.google.firebase:firebase-bom:32.7.0')
+    
+    // Firebase dependencies (auto-managed by BoM)
+    implementation 'com.google.firebase:firebase-analytics'
+    implementation 'com.google.firebase:firebase-crashlytics'
+    implementation 'com.google.firebase:firebase-messaging'
+    
+    // AdMob
+    implementation 'com.google.android.gms:play-services-ads:22.6.0'
+    
+    // In-App Purchases
+    implementation 'com.android.billingclient:billing:6.0.1'
+    
+    // Support libraries
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.10.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    
+    // Lifecycle components
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2'
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.6.2'
+    
+    // Navigation component
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.7.5'
+    implementation 'androidx.navigation:navigation-ui-ktx:2.7.5'
+}

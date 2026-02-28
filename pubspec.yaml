@@ -1,0 +1,90 @@
+name: sineyorum
+description: Film yorumlama uygulaması - TMDB API, Firebase, AdMob entegrasyonlu
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+  flutter: '>=3.19.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # State Management & Navigation
+  provider: ^6.1.1
+  get: ^4.6.6
+
+  # Firebase
+  firebase_core: ^2.28.0
+  firebase_auth: ^4.17.3
+  cloud_firestore: ^4.15.2
+  firebase_storage: ^11.5.2
+  firebase_analytics: ^10.8.3
+  firebase_crashlytics: ^3.5.3
+
+  # AdMob
+  google_mobile_ads: ^3.2.0
+
+  # HTTP & API
+  http: ^1.1.0
+  dio: ^5.4.0
+  cached_network_image: ^3.3.0
+
+  # YouTube
+  youtube_player_flutter: ^8.1.2
+  youtube_api: ^3.0.0
+
+  # Localization
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.18.1
+
+  # UI & Animations
+  shimmer: ^3.0.0
+  carousel_slider: ^4.2.1
+  flutter_rating_bar: ^4.0.1
+  flutter_svg: ^2.0.9
+  lottie: ^2.7.0
+
+  # Utilities
+  shared_preferences: ^2.2.2
+  url_launcher: ^6.2.1
+  package_info_plus: ^5.0.1
+  device_info_plus: ^9.1.2
+  connectivity_plus: ^5.0.1
+
+  # Environment
+  flutter_dotenv: ^5.1.0
+
+  # In-App Purchases
+  in_app_purchase: ^3.1.10
+  revenuecat: ^5.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+  mockito: ^5.4.4
+  build_runner: ^2.4.7
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/animations/
+    - .env
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700

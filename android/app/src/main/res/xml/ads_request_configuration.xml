@@ -1,0 +1,22 @@
+<resources>
+    <!-- Test Device IDs for AdMob -->
+    <!-- Add your test device IDs here during development -->
+    <!-- To get your test device ID, check Logcat for "Use RequestConfiguration.Builder.setTestDeviceIds" -->
+    
+    <string-array name="test_device_ids">
+        <!-- Example test device IDs -->
+        <!-- <item>33BE2250B43518CCDA7DE426D04EE231</item> -->
+    </string-array>
+    
+    <!-- Max Ad Content Rating -->
+    <!-- Options: G, PG, T, MA -->
+    <string name="max_ad_content_rating">T</string>
+    
+    <!-- Tag for Child-Directed Treatment -->
+    <!-- true: Child-directed, false: Not child-directed, null: Unspecified -->
+    <bool name="tag_for_child_directed_treatment">false</bool>
+    
+    <!-- Tag for Under Age of Consent -->
+    <!-- true: Under age of consent, false: Not under age of consent, null: Unspecified -->
+    <bool name="tag_for_under_age_of_consent">false</bool>
+</resources>
